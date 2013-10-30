@@ -1,0 +1,50 @@
+import numpy as nu
+import pyfits
+import matplotlib.pyplot as plt
+
+fig = plt.figure(0)
+fig.clear()
+
+#creating a circular wavefront
+
+n=30
+
+wavefront=nu.zeros([n,n], dtype=int)
+
+def circle(radius):
+  if n%2==0:
+    for a in range(0,n):
+      for b in range(0,n):
+        if ((a-(n/2-0.5))**2+(b-(n/2-0.5))**2)<=((n*radius)**2):
+          wavefront[a,b]=1
+  else:
+    for a in range(0,n):
+      for b in range(0,n):
+        if ((a-(n/2))**2+(b-(n/2))**2)<=((n*radius)**2):
+          wavefront[a,b]=1
+  return wavefront
+
+print circle(3**-1)
+
+#adding a tilt to the wavefront (lowest order zernike polynomial?)
+
+def tilt(a1):
+  for a in range(0,n):
+    for b in range(0,n):
+      if wavefront[a,b]!=0:
+        wavefront[a,b]=a*a1
+  return wavefront
+
+print tilt(400)
+
+#taking the fft
+
+airy=nu.fft.fft2(tilt(400), s=None, axes=(0,1))
+
+ax1 = fig.add_axes([0.1, 0.1, 0.4, 0.4])
+im1= ax1.imshow(nu.fft.fftshift(nu.abs(airy)))
+
+#seeing no result : (
+
+fig.show()
+fig.savefig("30,3,400.png")
