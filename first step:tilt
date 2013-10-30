@@ -44,7 +44,7 @@ airy=nu.fft.fft2(tilt(400), s=None, axes=(0,1))
 ax1 = fig.add_axes([0.1, 0.1, 0.4, 0.4])
 im1= ax1.imshow(nu.fft.fftshift(nu.abs(airy)))
 
-#seeing no result : (
+#seeing no result for different values of a1 : (
 
 fig.show()
 fig.savefig("30,3,400.png")
