@@ -1,0 +1,237 @@
+import numpy as nu
+import pyfits
+import matplotlib.pyplot as plt
+
+#creating a circular wavefront............................................
+
+n=1000
+xcent = n/2.0
+ycent = n/2.0
+
+def flat(radius):
+  """ Creates a flat beam of a given radius """
+  wavefront=nu.zeros([n,n], dtype=nu.float32)
+  for a in range(0,n):
+    for b in range(0,n):
+       if ((a-xcent)**2+(b-ycent)**2)<=((radius)**2):
+          wavefront[a,b]=1.0
+  return wavefront
+
+flat_beam = flat(200)
+radius = 200 
+
+#adding a tip and tilt...................................................
+
+def tilt(wavefront, phase):
+  wf = wavefront.copy()
+  dphase = nu.arange(n)*phase/float(n)
+  for a in range(len(wf)):
+      wf[a,:] *= dphase[a]
+  return wf
+
+def tip(wavefront, phase):
+  wf = wavefront.copy()
+  dphase = nu.arange(n)*phase/float(n)
+  for a in range(len(wf[0])):
+      wf[:,a] *= dphase[a]
+  return wf
+
+
+tilted_beam = tilt(flat_beam, 1)
+tipped_beam = tip(flat_beam, 1)
+tiptilt_beam = tip(tilted_beam, 1)
+
+#adding defocus.............................................................
+
+def defocus(wavefront, phase):
+  wf=wavefront.copy()
+  for a in range(0,n):
+    for b in range(0,n):
+      wf[a,b]*=phase*(3.464*((a-xcent)**2+(b-ycent)**2)-1.731)
+  return wf
+
+defo_beam=defocus(flat_beam,1)
+tiptiltdefo_beam=defocus(tiptilt_beam,1)
+
+#adding astigmatism.......................................................
+
+def astig1(wavefront, a1):
+  wf=wavefront.copy()
+  for a in range(0,n):
+    for b in range(0,n):
+      if a!=ycent:
+        wf[a,b]=wf[a,b]*a1*2.449*((a-xcent)**2+(b-ycent)**2)*nu.sin(2*nu.arctan((b-xcent)/(a-ycent)))
+  return wf
+
+astig1_beam=astig1(flat_beam,1)
+
+def astig2(wavefront, a1):
+  wf=wavefront.copy()
+  for a in range(0,n):
+    for b in range(0,n):
+      if a!=ycent:
+        wf[a,b]=wf[a,b]*a1*2.449*((a-xcent)**2+(b-ycent)**2)*nu.cos(2*nu.arctan((b-xcent)/(a-ycent)))
+  return wf
+
+astig2_beam=astig2(flat_beam,1) 
+
+#adding coma..............................................................
+
+def coma1(wavefront, a1):
+  wf=wavefront.copy()
+  for a in range(0,n):
+    for b in range(0,n):
+      if a!=ycent:
+        wf[a,b]=wf[a,b]*a1*(8.485*nu.sqrt((a-xcent)**2+(b-ycent)**2)**3-5.657*nu.sqrt((a-xcent)**2+(b-ycent)**2))*nu.sin(nu.arctan((b-xcent)/(a-ycent)))
+  return wf
+
+coma1_beam=coma1(flat_beam,1)
+
+def coma2(wavefront, a1):
+  wf=wavefront.copy()
+  for a in range(0,n):
+    for b in range(0,n):
+      if a!=ycent:
+        wf[a,b]=wf[a,b]*a1*(8.485*nu.sqrt((a-xcent)**2+(b-ycent)**2)**3-5.657*nu.sqrt((a-xcent)**2+(b-ycent)**2))*nu.cos(nu.arctan((b-xcent)/(a-ycent)))
+  return wf
+
+coma2_beam=coma2(flat_beam,1) 
+
+# adding Z9 and Z10.......................................................
+
+def z9(wavefront, a1):
+  wf=wavefront.copy()
+  for a in range(0,n):
+    for b in range(0,n):
+      if a!=ycent:
+        wf[a,b]=wf[a,b]*a1*2.828*(nu.sqrt((a-xcent)**2+(b-ycent)**2)**3)*nu.sin(3*nu.arctan((b-xcent)/(a-ycent)))
+  return wf
+
+z9_beam=z9(flat_beam,1)
+
+def z10(wavefront, a1):
+  wf=wavefront.copy()
+  for a in range(0,n):
+    for b in range(0,n):
+      if a!=ycent:
+        wf[a,b]=wf[a,b]*a1*2.828*(nu.sqrt((a-xcent)**2+(b-ycent)**2)**3)*nu.cos(3*nu.arctan((b-xcent)/(a-ycent)))
+  return wf
+
+z10_beam=z10(flat_beam,1) 
+
+
+#adding spherical abberation..............................................
+
+def spheric(wavefront, a1):
+  wf=wavefront.copy()
+  for a in range(0,n):
+    for b in range(0,n):
+      if a!=ycent:
+        wf[a,b]=wf[a,b]*a1*2.828*(nu.sqrt((a-xcent)**2+(b-ycent)**2)**3)*nu.cos(3*nu.arctan((b-xcent)/(a-ycent)))
+  return wf
+
+spheric_beam=spheric(flat_beam,1)
+
+#taking the fft...........................................................
+
+airy_flat = nu.fft.fft2(flat_beam)
+airy_tilt = nu.fft.fft2(tilted_beam)
+airy_tip = nu.fft.fft2(tipped_beam)
+airy_tiptilt = nu.fft.fft2(tiptilt_beam)
+airy_defocus = nu.fft.fft2(defo_beam)
+airy_tiptiltdef = nu.fft.fft2(tiptiltdefo_beam)
+airy_astig1 = nu.fft.fft2(astig1_beam)
+airy_astig2 = nu.fft.fft2(astig2_beam)
+
+psf_flat = nu.log10(nu.abs(airy_flat*nu.conj(airy_flat)))
+psf_tilt = nu.log10(nu.abs(airy_tilt*nu.conj(airy_tilt)))
+psf_tip = nu.log10(nu.abs(airy_tip*nu.conj(airy_tip)))
+psf_tiptilt = nu.log10(nu.abs(airy_tiptilt*nu.conj(airy_tiptilt)))
+psf_defocus = nu.log10(nu.abs(airy_defocus*nu.conj(airy_defocus)))
+psf_tiptiltdef = nu.log10(nu.abs(airy_tiptiltdef*nu.conj(airy_tiptiltdef)))
+psf_astig1=nu.log10(nu.abs(airy_astig1*nu.conj(airy_astig1)))
+psf_astig2=nu.log10(nu.abs(airy_astig2*nu.conj(airy_astig2)))
+
+
+# making plots...........................................................
+
+f1 = plt.figure(0)
+f1.clear()
+f2 = plt.figure(1)
+f2.clear()
+f3 = plt.figure(2)
+f3.clear()
+f4 = plt.figure(3)
+f4.clear()
+f5 = plt.figure(4)
+f5.clear()
+f6 = plt.figure(5)
+f6.clear()
+
+ax11 = f1.add_axes([0.1, 0.1, 0.4, 0.4])
+ax12 = f1.add_axes([0.5, 0.5, 0.4, 0.4])
+ax13 = f1.add_axes([0.1, 0.5, 0.4, 0.4])
+ax14 = f1.add_axes([0.5, 0.1, 0.4, 0.4])
+im11= ax11.imshow(nu.fft.fftshift(psf_flat))
+im13= ax13.imshow(flat_beam)
+im14= ax14.imshow(tilted_beam)
+im12= ax12.imshow(nu.fft.fftshift(psf_tilt))
+
+ax21 = f2.add_axes([0.1, 0.1, 0.4, 0.4])
+ax22 = f2.add_axes([0.5, 0.5, 0.4, 0.4])
+ax23 = f2.add_axes([0.1, 0.5, 0.4, 0.4])
+ax24 = f2.add_axes([0.5, 0.1, 0.4, 0.4])
+im21= ax21.imshow(nu.fft.fftshift(psf_tip))
+im23= ax23.imshow(tipped_beam)
+im24= ax24.imshow(tiptilt_beam)
+im22= ax22.imshow(nu.fft.fftshift(psf_tiptilt))
+
+ax31 = f3.add_axes([0.1, 0.1, 0.4, 0.4])
+ax32 = f3.add_axes([0.5, 0.5, 0.4, 0.4])
+ax33 = f3.add_axes([0.1, 0.5, 0.4, 0.4])
+ax34 = f3.add_axes([0.5, 0.1, 0.4, 0.4])
+im31 = ax31.imshow(nu.fft.fftshift(psf_flat))
+im33 = ax33.imshow(flat_beam)
+im34 = ax34.imshow(defo_beam)
+im32 = ax32.imshow(nu.fft.fftshift(psf_defocus))
+
+ax41 = f4.add_axes([0.1, 0.1, 0.4, 0.4])
+ax42 = f4.add_axes([0.5, 0.5, 0.4, 0.4])
+ax43 = f4.add_axes([0.1, 0.5, 0.4, 0.4])
+ax44 = f4.add_axes([0.5, 0.1, 0.4, 0.4])
+im41 = ax41.imshow(nu.fft.fftshift(psf_tiptilt))
+im43 = ax43.imshow(tiptilt_beam)
+im44 = ax44.imshow(tiptiltdefo_beam)
+im42 = ax42.imshow(nu.fft.fftshift(psf_tiptiltdef))
+
+ax51 = f5.add_axes([0.1, 0.1, 0.4, 0.4])
+ax52 = f5.add_axes([0.5, 0.5, 0.4, 0.4])
+ax53 = f5.add_axes([0.1, 0.5, 0.4, 0.4])
+ax54 = f5.add_axes([0.5, 0.1, 0.4, 0.4])
+im51 = ax51.imshow(nu.fft.fftshift(psf_tiptilt))
+im53 = ax53.imshow(tiptilt_beam)
+im54 = ax54.imshow(astig1_beam)
+im52 = ax52.imshow(nu.fft.fftshift(psf_astig1))
+
+ax61 = f6.add_axes([0.1, 0.1, 0.4, 0.4])
+ax62 = f6.add_axes([0.5, 0.5, 0.4, 0.4])
+ax63 = f6.add_axes([0.1, 0.5, 0.4, 0.4])
+ax64 = f6.add_axes([0.5, 0.1, 0.4, 0.4])
+im61 = ax61.imshow(nu.fft.fftshift(psf_flat))
+im63 = ax63.imshow(flat_beam)
+im64 = ax64.imshow(astig2_beam)
+im62 = ax62.imshow(nu.fft.fftshift(psf_astig2))
+
+
+#f1.show()
+#f2.show()
+#f3.show()
+#f4.show()
+#f5.show()
+#f6.show()
+#f1.savefig("only tilt.png")
+#f2.savefig("tiptilt.png")
+#f3.savefig("defocus.png")
+#f4.savefig("tiptiltdef.png")
+#f5.savefig("astig1.png")
+#f6.savefig("astig2.png")
