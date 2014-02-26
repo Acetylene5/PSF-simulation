@@ -84,4 +84,6 @@ im22= ax22.imshow(nu.fft.fftshift(psf_tiptilt))
 
 f1.show()
 f2.show()
+f1.savefig('Flat_Tilt.png')
+f1.savefig('Tip_TipTilt.png')
 #fig.savefig("30,3,400.png")
